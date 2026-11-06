@@ -6,19 +6,37 @@ const name=i=>$('mode').value==='full'?(people[i]?.Name||i):i;
 function table(head,rows){return '<div class="scroll"><table><thead><tr>'+head.map(v=>'<th>'+esc(v)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'}
 function options(id,values,placeholder){$(id).innerHTML=(placeholder?'<option value="">'+esc(placeholder)+'</option>':'')+values.map(v=>'<option value="'+esc(v[0])+'">'+esc(v[1])+'</option>').join('')}
 const ordered=[...D.roster].sort((a,b)=>a.Date.localeCompare(b.Date)||a.Start-b.Start);
+function readableDate(date){return new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Dhaka'}).format(new Date(date+'T00:00:00+06:00'))}
+function dutyLabel(t){if(t.Kind==='Script Receive')return 'Script Receive Duty';if(t.Kind==='Medical Center')return 'Medical Center Duty';return t.Exam==='Retake'?'Retake/Improvement Examination':'Regular Examination'}
+function endsAt(t){return new Date(t.Date+'T00:00:00+06:00').getTime()+Number(t.End)*60000}
+function metadataLabel(exam){const m=D.metadata[exam];return m?m.exam_title+' ('+m.session+')':''}
+function rosterTables(rows){
+ if(!rows.length)return '<p>No duties match the selected filters.</p>';
+ return ['Regular','Retake'].map(exam=>{
+ const group=rows.filter(t=>t.Exam===exam);if(!group.length)return '';
+ const heading=exam==='Retake'?'Retake/Improvement Examination':'Regular Examination';
+ return '<div class="roster-section"><h3>'+esc(heading)+'</h3><p>'+esc(metadataLabel(exam))+'</p>'+
+ table(['Date','Shift','Room','Time','Invigilators'],group.map(t=>[readableDate(t.Date),t.Shift,t.Room,t.Time,t.Members.map(name).join(', ')]))+'</div>';
+ }).join('');
+}
 function render(){
  const who=$('person').value;
- $('personal').innerHTML=ordered.filter(t=>t.Members.includes(who)).map(t=>'<div class="card"><strong>'+esc(t.Date)+' · '+esc(t.Exam)+' · '+esc(t.Kind)+'</strong><br>'+esc(t.Time||'Script Receive')+' | '+esc(t.Room)+'<br>'+esc(t.Members.map(name).join(', '))+'</div>').join('')||'<p>No duties assigned.</p>';
+ const now=Date.now(),mine=ordered.filter(t=>t.Members.includes(who));
+ const upcoming=mine.filter(t=>endsAt(t)>now),showPast=$('show-completed').checked;
+ $('remaining-count').textContent=String(upcoming.length);
+ $('next-duty').textContent=upcoming.length?readableDate(upcoming[0].Date):'No upcoming duties';
+ const visible=showPast?mine:upcoming;
+ $('personal').innerHTML=visible.map(t=>'<div class="card'+(endsAt(t)<=now?' completed':'')+'"><strong>'+esc(readableDate(t.Date))+' · '+esc(dutyLabel(t))+'</strong>'+(endsAt(t)<=now?'<span class="duty-status">Completed</span>':'')+'<br>'+esc(t.Time||'Script Receive')+' | '+esc(t.Kind==='Script Receive'?'Semester '+t.Semester:'Room '+t.Room)+'<br>'+esc(t.Members.map(name).join(', '))+'</div>').join('')||'<p>'+(showPast?'No duties assigned.':'No upcoming duties')+'</p>';
  const rows=ordered.filter(t=>t.Kind!=='Script Receive'&&(!$('date').value||t.Date===$('date').value)&&(!$('exam').value||t.Exam===$('exam').value)&&(!$('room').value||t.Room===$('room').value)&&(!$('teacher').value||t.Members.includes($('teacher').value)));
- $('roster').innerHTML=table(['Exam','Date','Shift','Room','Time','Invigilators'],rows.map(t=>[t.Exam,t.Date,t.Shift,t.Room,t.Time,t.Members.map(name).join(', ')]));
+ $('roster').innerHTML=rosterTables(rows);
  const days=[...new Set(ordered.filter(t=>t.Kind==='Script Receive').map(t=>t.Date))];
  $('receivers').innerHTML=table(['Date','Members on duty'],days.map(d=>[d,ordered.filter(t=>t.Date===d&&t.Kind==='Script Receive').map(t=>t.Semester+' = '+t.Members.map(name).join(', ')).join('; ')]));
- $('totals').innerHTML=table(['Initials','Teacher','Regular','Retake','Receive','Medical','Total'],D.summary.map(t=>[t.Initials,t.Teacher,t.Regular,t.Retake,t['Script Receive'],t['Medical Center'],t.Total]));
+ $('totals').innerHTML=table(['Initials','Teacher','Regular','Retake','Script Receive','Medical','Total'],D.summary.map(t=>[t.Initials,t.Teacher,t.Regular,t.Retake,t['Script Receive'],t['Medical Center'],t.Total]));
  $('changes').innerHTML=D.swaps.length?D.swaps.map(e=>'<div class="card">'+esc(e.Applied)+table(['Duty','Date','Room','Before','After'],e.Before.map((b,i)=>[b.Kind,b.Date,b.Room,b.Members.map(name).join(', '),e.After[i].Members.map(name).join(', ')]))+'</div>').join(''):'<p>No applied duty swaps.</p>';
  const q=$('search').value.toLowerCase();
- $('contacts').innerHTML=table(['Initials','Name','Designation'],D.teachers.filter(t=>(t.Initials+' '+t.Name+' '+t.Designation).toLowerCase().includes(q)).map(t=>[t.Initials,t.Name,t.Designation]));
+ $('contacts').innerHTML=table(['Initials','Name','Designation'],D.teachers.filter(t=>(t.Initials+' '+t.Name+' '+t.Designation).toLowerCase().includes(q)).map(t=>[t.Initials,t.Name,t.Designation==='New Lecturer'?'Lecturer':t.Designation]));
 }
-$('session').textContent=Object.values(D.metadata).map(m=>m.exam_title+' ('+m.session+')').join(' / ');
+$('session').textContent=Object.values(D.metadata).map(m=>m.exam_title+' ('+m.session+')').join(' and ');
 options('person',D.teachers.map(t=>[t.Initials,t.Initials+' — '+t.Name]));
 options('teacher',D.teachers.map(t=>[t.Initials,t.Initials+' — '+t.Name]),'All teachers');
 options('date',[...new Set(ordered.map(t=>t.Date))].map(d=>[d,d]),'All dates');
@@ -26,7 +44,7 @@ options('room',[...new Set(ordered.filter(t=>t.Kind!=='Script Receive').map(t=>t
 try{if(people[localStorage.getItem('duty-person')])$('person').value=localStorage.getItem('duty-person')}catch{}
 $('remember').onclick=()=>{try{localStorage.setItem('duty-person',$('person').value);$('remember').textContent='Remembered'}catch{$('remember').textContent='Storage unavailable'}};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('main section').forEach(s=>s.hidden=s.id!==b.dataset.tab);document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b))});
-['person','teacher','date','exam','room','mode'].forEach(id=>$(id).onchange=render);
+['person','teacher','date','exam','room','mode','show-completed'].forEach(id=>$(id).onchange=render);
 $('clear').onclick=()=>{['date','exam','room','teacher'].forEach(id=>$(id).value='');render()};
 $('search').oninput=render;$('print').onclick=()=>window.print();$('personal-print').onclick=()=>window.print();
 
@@ -65,4 +83,5 @@ function downloadCalendar(){
 $('calendar').onclick=downloadCalendar;
 $('google-calendar').onclick=()=>{downloadCalendar();window.open('https://calendar.google.com/calendar/u/0/r/settings/export','_blank','noopener')};
 document.querySelector('nav button').classList.add('active');render();
+setInterval(render,60000);
 
