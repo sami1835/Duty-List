@@ -16,18 +16,3 @@
 .summary-card{padding:12px}.summary-card strong{font-size:20px}}
 @media print{.logo-plate{background:white}.summary-grid,.completed-toggle,.name-display{display:none!important}
 .header-grid{grid-template-columns:90px minmax(0,1fr) 90px;gap:14px}.logo-plate{width:80px;height:110px}.header-copy p{font-size:12px}}
-
-/* Keep actions apart in both existing and newly exported roster pages. */
-#mine > button { margin:6px 10px 6px 0; }
-.duty-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px;
-    margin:8px 0 18px; }
-.duty-actions > label { display:flex; flex-wrap:wrap; align-items:center;
-    gap:8px; margin:0; max-width:100%; min-width:0; }
-.duty-actions select { width:min(340px,100%); min-width:0; }
-.duty-actions > button { flex:0 1 auto; margin:0; white-space:normal; }
-#all > p { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
-@media(max-width:650px) {
-    .duty-actions > label { flex-basis:100%; }
-    .duty-actions > button { max-width:100%; }
-}
-@media print { .duty-actions { display:none!important; } }
