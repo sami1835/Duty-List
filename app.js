@@ -34,7 +34,7 @@ function render(){
  $('totals').innerHTML=table(['Initials','Teacher','Regular','Retake','Script Receive','Medical','Total'],D.summary.map(t=>[t.Initials,t.Teacher,t.Regular,t.Retake,t['Script Receive'],t['Medical Center'],t.Total]));
  $('changes').innerHTML=D.swaps.length?D.swaps.map(e=>'<div class="card">'+esc(e.Applied)+table(['Duty','Date','Room','Before','After'],e.Before.map((b,i)=>[b.Kind,b.Date,b.Room,b.Members.map(name).join(', '),e.After[i].Members.map(name).join(', ')]))+'</div>').join(''):'<p>No applied duty swaps.</p>';
  const q=$('search').value.toLowerCase();
- $('contacts').innerHTML=table(['Initials','Name','Designation'],D.teachers.filter(t=>(t.Initials+' '+t.Name+' '+t.Designation).toLowerCase().includes(q)).map(t=>[t.Initials,t.Name,t.Designation==='New Lecturer'?'Lecturer':t.Designation]));
+ $('contacts').innerHTML=table(['Initials','Name','Designation'],D.teachers.filter(t=>(t.Initials+' '+t.Name+' '+t.Designation).toLowerCase().includes(q)).map(t=>[t.Initials,t.Name,t.Designation]));
 }
 $('session').textContent=Object.values(D.metadata).map(m=>m.exam_title+' ('+m.session+')').join(' and ');
 options('person',D.teachers.map(t=>[t.Initials,t.Initials+' — '+t.Name]));
